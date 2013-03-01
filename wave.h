@@ -38,7 +38,7 @@ extern BOOL StartWave(LPWAVE);
 /* stop audio playback */
 extern BOOL StopWave(LPWAVE);
 
-/* reset the audio event, free the done headers and possible continue the ringtone playback */
+/* reset the audio event, free the done headers and possible continue the ring tone playback */
 extern BOOL HandleDoneWaveHeaders(LPWAVE);
 
 /* enqueue another block of audio for playback */

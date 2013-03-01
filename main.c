@@ -223,8 +223,11 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR argv[])
 
 					/* enque the wave form header */
 					if (evt->session == session && settings->RingTone == NULL)
+					{
 						CHECK(EnqueueWaveHeader(wave, ReverseByteOrder(evt->data, evt->datalen), evt->datalen, evt), GetLastWaveError());
-					continue;
+						continue;
+					}
+					break;
 			}
 
 			/* free the memory for the event */

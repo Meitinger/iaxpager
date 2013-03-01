@@ -42,18 +42,58 @@ struct tagWAVE
 	WAVEHDR Headers[WAVE_BUFFERS];
 };
 
+/* enqueue wave data for playback */
+static BOOL InternalEnqueueWaveHeader(LPWAVE wave, LPVOID buffer, DWORD size, LPVOID userData)
+{
+	/* ensure that there is a header available */
+	if (wave->NoAvailableHeaders)
+		return FALSE;
+
+	/* set the header structure */
+	memset(&wave->Headers[wave->NextAvailableHeader], 0, sizeof(WAVEHDR));
+	wave->Headers[wave->NextAvailableHeader].lpData = (LPSTR)buffer;
+	wave->Headers[wave->NextAvailableHeader].dwBufferLength = size;
+	wave->Headers[wave->NextAvailableHeader].dwUser = (DWORD_PTR)userData;
+
+	/* prepare the header */
+	lastError = waveOutPrepareHeader(wave->Device, &wave->Headers[wave->NextAvailableHeader], sizeof(WAVEHDR));
+	if (lastError != MMSYSERR_NOERROR)
+		return FALSE;
+
+	/* send the header to the device */
+	lastError = waveOutWrite(wave->Device, &wave->Headers[wave->NextAvailableHeader], sizeof(WAVEHDR));
+	if (lastError != MMSYSERR_NOERROR)
+	{
+		waveOutUnprepareHeader(wave->Device, &wave->Headers[wave->NextAvailableHeader], sizeof(WAVEHDR));
+		return FALSE;
+	}
+
+	/* increment the prepared counter */
+	wave->NextAvailableHeader = (wave->NextAvailableHeader + 1) % WAVE_BUFFERS;
+	wave->NoAvailableHeaders = wave->NextAvailableHeader == wave->FirstPreparedHeader;
+	return TRUE;
+}
+
 /* free all done headers starting from the first */
 static BOOL InternalHandleDoneWaveHeaders(LPWAVE wave)
 {
+	LPVOID userData;
+
 	while ((wave->NoAvailableHeaders || wave->FirstPreparedHeader != wave->NextAvailableHeader) && (wave->Headers[wave->FirstPreparedHeader].dwFlags & WHDR_DONE) == WHDR_DONE)
 	{
+		/* unprepare the header data */
 		lastError = waveOutUnprepareHeader(wave->Device, &wave->Headers[wave->FirstPreparedHeader], sizeof(WAVEHDR));
 		if (lastError != MMSYSERR_NOERROR)
 			return !wave->NoAvailableHeaders;
+
+		/* store the old user data and advance the prepared header */
+		userData = (LPVOID)wave->Headers[wave->FirstPreparedHeader].dwUser;
 		wave->NoAvailableHeaders = FALSE;
 		wave->FirstPreparedHeader = (wave->FirstPreparedHeader + 1) % WAVE_BUFFERS;
-		if (wave->Headers[wave->FirstPreparedHeader].dwUser != 0)
-			wave->Callback((LPVOID)wave->Headers[wave->FirstPreparedHeader].dwUser);
+
+		/* invoke the callback if we're not playing a ring tone */
+		if (wave->Data == NULL && wave->Callback != NULL)
+			wave->Callback(userData);
 	}
 	return TRUE;
 }
@@ -83,7 +123,7 @@ static BOOL PlayData(LPWAVE wave)
 			size -= wave->NextBlockOffset - wave->EndOffset;
 
 		/* play the buffer */
-		if (!EnqueueWaveHeader(wave, buffer, size, NULL))
+		if (!InternalEnqueueWaveHeader(wave, buffer, size, NULL))
 			return FALSE;
 	}
 	return TRUE;
@@ -109,7 +149,7 @@ LPWAVE InitializeWave(LPSETTINGS settings, WSAEVENT event, LPHEADERDONEPROC call
 	wave->Callback = callback;
 	wave->File = INVALID_HANDLE_VALUE;
 
-	/* either lookup the wave format in the ringtone file or use slin */
+	/* either lookup the wave format in the ring tone file or use slin */
 	if (wave->Settings->RingTone != NULL)
 	{
 		/* open and map the file to memory */
@@ -178,7 +218,7 @@ LPWAVE InitializeWave(LPSETTINGS settings, WSAEVENT event, LPHEADERDONEPROC call
 
 ON_ERROR:
 	/* free the wave structure and return NULL on error */
-	FREE(wave);
+	FreeWave(wave);
 	return NULL;
 }
 
@@ -215,11 +255,11 @@ BOOL StartWave(LPWAVE wave)
 			wave->HasLastVolume = waveOutSetVolume(wave->Device, MAKELONG((WORD)wave->Settings->Volume,(WORD)wave->Settings->Volume)) == MMSYSERR_NOERROR;
 	}
 
-	/* just exit if no ringtone is loaded */
+	/* just exit if no ring tone is loaded */
 	if (wave->Data == NULL)
 		return TRUE;
 
-	/* start the ringtone playback */
+	/* start the ring tone playback */
 	wave->NextBlockOffset = wave->StartOffset;
 	return PlayData(wave);
 }
@@ -236,13 +276,13 @@ BOOL StopWave(LPWAVE wave)
 	if (lastError != MMSYSERR_NOERROR)
 		return FALSE;
 
-	/* reset the ringtone (if present) and free the headers */
+	/* reset the ring tone (if present) and free the headers */
 	if (wave->Data != NULL)
 		wave->NextBlockOffset = 0;
 	return InternalHandleDoneWaveHeaders(wave);
 }
 
-/* reset the audio event, free the done headers and possible continue the ringtone playback */
+/* reset the audio event, free the done headers and possible continue the ring tone playback */
 BOOL HandleDoneWaveHeaders(LPWAVE wave)
 {
 	/* reset the event */
@@ -256,38 +296,25 @@ BOOL HandleDoneWaveHeaders(LPWAVE wave)
 	if (!InternalHandleDoneWaveHeaders(wave))
 		return FALSE;
 
-	/* either return or continue ringtone playback */
+	/* either return or continue ring tone playback */
 	return (wave->Data == NULL || wave->NextBlockOffset == 0) ? TRUE : PlayData(wave);
 }
 
 /* enqueue another block of audio for playback */
 BOOL EnqueueWaveHeader(LPWAVE wave, LPVOID buffer, DWORD size, LPVOID userData)
 {
-	/* if we don't have any free buffers we have to skip this header */
+	/* when we play a ring tone no other wave headers are allowed */
+	if (wave->Data != NULL)
+		return FALSE;
+
+	/* if we don't have any free buffers we have to skip this header and just invoke the callback */
 	if (wave->NoAvailableHeaders)
-		return TRUE;
-
-	/* set the header structure */
-	memset(&wave->Headers[wave->NextAvailableHeader], 0, sizeof(WAVEHDR));
-	wave->Headers[wave->NextAvailableHeader].lpData = (LPSTR)buffer;
-	wave->Headers[wave->NextAvailableHeader].dwBufferLength = size;
-	wave->Headers[wave->NextAvailableHeader].dwUser = (DWORD_PTR)userData;
-
-	/* prepare the header */
-	lastError = waveOutPrepareHeader(wave->Device, &wave->Headers[wave->NextAvailableHeader], sizeof(WAVEHDR));
-	if (lastError != MMSYSERR_NOERROR)
-		return FALSE;
-
-	/* send the header to the device */
-	lastError = waveOutWrite(wave->Device, &wave->Headers[wave->NextAvailableHeader], sizeof(WAVEHDR));
-	if (lastError != MMSYSERR_NOERROR)
 	{
-		waveOutUnprepareHeader(wave->Device, &wave->Headers[wave->NextAvailableHeader], sizeof(WAVEHDR));
-		return FALSE;
+		if (wave->Callback != NULL)
+			wave->Callback(userData);
+		return TRUE;
 	}
 
-	/* increment the prepared counter */
-	wave->NextAvailableHeader = (wave->NextAvailableHeader + 1) % WAVE_BUFFERS;
-	wave->NoAvailableHeaders = wave->NextAvailableHeader == wave->FirstPreparedHeader;
-	return TRUE;
+	/* actually enqueue the buffer */
+	return InternalEnqueueWaveHeader(wave, buffer, size, userData);
 }
