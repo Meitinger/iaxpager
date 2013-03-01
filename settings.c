@@ -1,7 +1,7 @@
 /*
  * IAX-Pager -- Turns your Windows Machine into a Phone-Speaker
  *
- * Copyright (C) 2008-2011, Manuel Meitinger
+ * Copyright (C) 2008-2013, Manuel Meitinger
  *
  * Manuel Meitinger <m.meitinger@aufbauwerk.com>
  *
@@ -46,7 +46,7 @@ LPSETTINGS ParseSettings(DWORD argc, LPTSTR argv[])
 		{
 			/* check whether the format is appropriate */
 			if (_tcslen(argv[i]) != 2 || (argv[i][0] != _T('-') && argv[i][0] != _T('/')))
-				return FALSE;
+				goto ON_ERROR;
 
 			/* check flag arguments */
 			switch (argv[i][1])

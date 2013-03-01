@@ -1,7 +1,7 @@
 /*
  * IAX-Pager -- Turns your Windows Machine into a Phone-Speaker
  *
- * Copyright (C) 2008-2011, Manuel Meitinger
+ * Copyright (C) 2008-2013, Manuel Meitinger
  *
  * Manuel Meitinger <m.meitinger@aufbauwerk.com>
  *
@@ -43,7 +43,10 @@ BOOL AppendHost(LPTSTR subnet, LPHOST *hosts)
 	LPHOST host;
 
 	if (_stscanf(subnet, _T("%d.%d.%d.%d/%d"), &b1, &b2, &b3, &b4, &net) != 5 || b1 < 0 || b1 > 0xFF || b2 < 0 || b2 > 0xFF || b3 < 0 || b3 > 0xFF || b4 < 0 || b4 > 0xFF || net < 0 || net > 32)
+	{
+		SetLastError(E_INVALIDARG);
 		return FALSE;
+	}
 	ALLOC(host);
 	host->Address = htonl((b1 << 24) | (b2 << 16) | (b3 << 8) | b4);
 	host->Network = htonl(0xFFFFFFFF << (32 - net));

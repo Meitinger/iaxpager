@@ -1,7 +1,7 @@
 /*
  * IAX-Pager -- Turns your Windows Machine into a Phone-Speaker
  *
- * Copyright (C) 2008-2011, Manuel Meitinger
+ * Copyright (C) 2008-2013, Manuel Meitinger
  *
  * Manuel Meitinger <m.meitinger@aufbauwerk.com>
  *
@@ -84,6 +84,7 @@ BOOL BeginServiceStatus(LPSERVICE service, DWORD state, DWORD waitHint)
 			service->Status.dwCurrentState = SERVICE_STOP_PENDING;
 			break;
 		default:
+			SetLastError(E_INVALIDARG);
 			return FALSE;
 	}
 	service->Status.dwCheckPoint = 0;
@@ -96,7 +97,10 @@ BOOL BeginServiceStatus(LPSERVICE service, DWORD state, DWORD waitHint)
 BOOL ProgressServiceStatus(LPSERVICE service)
 {
 	if (service->TargetState == 0)
+	{
+		SetLastError(E_UNEXPECTED);
 		return FALSE;
+	}
 	service->Status.dwCheckPoint++;
 	return SetServiceStatus(service->Handle, &service->Status);
 }
@@ -105,7 +109,10 @@ BOOL ProgressServiceStatus(LPSERVICE service)
 BOOL EndServiceStatus(LPSERVICE service)
 {
 	if (service->TargetState == 0)
+	{
+		SetLastError(E_UNEXPECTED);
 		return FALSE;
+	}
 	service->Status.dwCurrentState = service->TargetState;
 	service->Status.dwCheckPoint = 0;
 	service->Status.dwWaitHint = 0;

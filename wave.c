@@ -1,7 +1,7 @@
 /*
  * IAX-Pager -- Turns your Windows Machine into a Phone-Speaker
  *
- * Copyright (C) 2008-2011, Manuel Meitinger
+ * Copyright (C) 2008-2013, Manuel Meitinger
  *
  * Manuel Meitinger <m.meitinger@aufbauwerk.com>
  *
@@ -47,7 +47,10 @@ static BOOL InternalEnqueueWaveHeader(LPWAVE wave, LPVOID buffer, DWORD size, LP
 {
 	/* ensure that there is a header available */
 	if (wave->NoAvailableHeaders)
+	{
+		lastError = E_UNEXPECTED;
 		return FALSE;
+	}
 
 	/* set the header structure */
 	memset(&wave->Headers[wave->NextAvailableHeader], 0, sizeof(WAVEHDR));
@@ -305,7 +308,10 @@ BOOL EnqueueWaveHeader(LPWAVE wave, LPVOID buffer, DWORD size, LPVOID userData)
 {
 	/* when we play a ring tone no other wave headers are allowed */
 	if (wave->Data != NULL)
+	{
+		lastError = E_UNEXPECTED;
 		return FALSE;
+	}
 
 	/* if we don't have any free buffers we have to skip this header and just invoke the callback */
 	if (wave->NoAvailableHeaders)

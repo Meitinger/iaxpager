@@ -1,7 +1,7 @@
 /*
  * IAX-Pager -- Turns your Windows Machine into a Phone-Speaker
  *
- * Copyright (C) 2008-2011, Manuel Meitinger
+ * Copyright (C) 2008-2013, Manuel Meitinger
  *
  * Manuel Meitinger <m.meitinger@aufbauwerk.com>
  *
