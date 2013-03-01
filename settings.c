@@ -10,11 +10,10 @@
  * at the top of the source tree.
  */
 
-#include <winsock2.h>
 #include <windows.h>
 #include <stdio.h>
 #include <tchar.h>
-#include "iax-client.h"
+#include "libiax2/iax-client.h"
 #include "common.h"
 #include "host.h"
 #include "settings.h"
@@ -27,7 +26,7 @@ LPSETTINGS ParseSettings(DWORD argc, LPTSTR argv[])
 
 	TCHAR lastFlag = _T('\0');
 	LPSETTINGS settings;
-	INT i;
+	DWORD i;
 
 	/* create and initialize the structure */
 	ALLOC(settings);

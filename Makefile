@@ -9,11 +9,11 @@ all: $(exename)
 clean:
 	DEL /S *.exe *.obj *.pdb
 
-$(exename): iax.obj iax2-parser.obj jitterbuf.obj md5.obj host.obj settings.obj wave.obj service.obj main.obj
+$(exename): libiax2\iax.obj libiax2\iax2-parser.obj libiax2\jitterbuf.obj libiax2\md5.obj host.obj settings.obj wave.obj service.obj main.obj
 	$(link) $(ldebug) $(conflags) -out:$@ $** $(conlibs) winmm.lib
 
 .c.obj:
-	$(cc) $(cdebug) $(cflags) $(cvars) /DSERVICE_NAME="""$(svcname)""" /D_CRT_SECURE_NO_WARNINGS $<
+	$(cc) $(cdebug) $(cflags) $(cvars) /DSERVICE_NAME="""$(svcname)""" /D_CRT_SECURE_NO_WARNINGS /Fo$*.obj $*.c
 
 install: $(exename)
 	COPY /Y /V $(exename) $(exepath)

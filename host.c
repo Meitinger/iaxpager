@@ -10,7 +10,6 @@
  * at the top of the source tree.
  */
 
-#include <winsock2.h>
 #include <windows.h>
 #include <stdio.h>
 #include <tchar.h>
