@@ -84,7 +84,7 @@ static BOOL InternalHandleDoneWaveHeaders(LPWAVE wave)
 		/* unprepare the header data */
 		lastError = waveOutUnprepareHeader(wave->Device, &wave->Headers[wave->FirstPreparedHeader], sizeof(WAVEHDR));
 		if (lastError != MMSYSERR_NOERROR)
-			return !wave->NoAvailableHeaders;
+			return FALSE;
 
 		/* store the old user data and advance the prepared header */
 		userData = (LPVOID)wave->Headers[wave->FirstPreparedHeader].dwUser;

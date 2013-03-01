@@ -69,7 +69,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR argv[])
 #define REG_REFRESH \
 { \
 		iax_register(registeredSession, settings->Host, settings->UserName, settings->Secret, IAX_DEFAULT_REG_EXPIRE); \
-		nextRegistration = GetTickCount() + IAX_DEFAULT_REG_EXPIRE; \
+		nextRegistration = GetTickCount() + IAX_DEFAULT_REG_EXPIRE*1000; \
 }
 #define CHECK(condition, error) { if (!(condition)) { exitCode = (error); goto LEAVE; } }
 
@@ -117,7 +117,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR argv[])
 			if (waitTimeForRegister < waitTimeForEvent)
 				waitTimeForEvent = waitTimeForRegister;
 		}
-		switch (WaitForServiceEvents(service, (DWORD)max(waitTimeForEvent,0)))
+		switch (WaitForServiceEvents(service, (DWORD)waitTimeForEvent))
 		{
 			/* on a wait fail set the error code and leave */
 			case WSA_WAIT_FAILED:
