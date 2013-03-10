@@ -114,7 +114,7 @@ static VOID WINAPI ServiceMain(DWORD argc, LPTSTR argv[])
 		if (registeredSession != NULL)
 		{
 			waitTimeForRegister = (INT)(nextRegistration - GetTickCount());
-			if (waitTimeForRegister < waitTimeForEvent)
+			if (waitTimeForEvent == (INT)INFINITE || waitTimeForRegister < waitTimeForEvent)
 				waitTimeForEvent = waitTimeForRegister;
 		}
 		switch (WaitForServiceEvents(service, (DWORD)waitTimeForEvent))
